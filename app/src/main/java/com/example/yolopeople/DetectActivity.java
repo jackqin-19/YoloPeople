@@ -13,6 +13,7 @@ import android.os.Bundle;
 import android.util.Log;
 import android.widget.Button;
 import android.widget.ImageView;
+import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.Toast;
 
@@ -39,6 +40,8 @@ public class DetectActivity extends AppCompatActivity {
     private DetectOverlayView overlayView;
     private ZoomLayout zoomContainer;
     private TextView tvModelCount, tvManualCount, tvDeletedCount, tvTotalCount;
+    private TextView tvConfLabel;
+    private SeekBar seekConf;
     private Button btnClearManual, btnRestoreModel, btnBack, btnConfirm, btnZoomMode, btnDeletePhoto;
 
     private PeopleDetector peopleDetector;
@@ -46,6 +49,13 @@ public class DetectActivity extends AppCompatActivity {
 
     private String imageUriStr;           // 当前图片的 Uri 字符串
     private boolean isZoomMode = false;
+
+    // 置信度阈值 & 原图缓存（用于重新检测）
+    private float confThreshold = PeopleDetector.DEFAULT_CONF_THRESHOLD;
+    private Bitmap originalBitmap;
+
+    // 是否是“再次编辑”进来的，用于决定改阈值时是否弹确认
+    private boolean hasInitialStateFromOutside = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -59,6 +69,8 @@ public class DetectActivity extends AppCompatActivity {
         tvManualCount   = findViewById(R.id.tv_manual_count);
         tvDeletedCount  = findViewById(R.id.tv_deleted_count);
         tvTotalCount    = findViewById(R.id.tv_total_count);
+        tvConfLabel     = findViewById(R.id.tv_conf_label);
+        seekConf        = findViewById(R.id.seek_conf);
         btnClearManual  = findViewById(R.id.btn_clear_manual);
         btnRestoreModel = findViewById(R.id.btn_restore_model);
         btnBack         = findViewById(R.id.btn_back);
@@ -118,6 +130,32 @@ public class DetectActivity extends AppCompatActivity {
 
         // 判断是不是"带状态再次编辑"
         boolean hasState = getIntent().hasExtra(EXTRA_IMAGE_WIDTH);
+        hasInitialStateFromOutside = hasState;
+
+        // 初始化置信度 UI
+        if (seekConf != null) {
+            seekConf.setProgress(thresholdToProgress(confThreshold));
+            updateConfLabel();
+            seekConf.setOnSeekBarChangeListener(new SeekBar.OnSeekBarChangeListener() {
+                @Override
+                public void onProgressChanged(SeekBar seekBar, int progress, boolean fromUser) {
+                    if (!fromUser) return;
+                    confThreshold = progressToThreshold(progress);
+                    updateConfLabel();
+                }
+
+                @Override
+                public void onStartTrackingTouch(SeekBar seekBar) {
+                    // ignore
+                }
+
+                @Override
+                public void onStopTrackingTouch(SeekBar seekBar) {
+                    // 用户松手 -> 重新跑检测
+                    onConfThresholdChanged();
+                }
+            });
+        }
 
         if (hasState) {
             // 再次编辑：恢复旧状态
@@ -153,8 +191,11 @@ public class DetectActivity extends AppCompatActivity {
                     return;
                 }
 
-                // 跑 YOLO
-                List<PeopleDetector.Box> boxes = peopleDetector.detectPeople(bitmap);
+                // 保存原图，便于后续在不同阈值下重新检测
+                originalBitmap = bitmap;
+
+                // 跑 YOLO（使用当前置信度阈值）
+                List<PeopleDetector.Box> boxes = peopleDetector.detectPeople(bitmap, confThreshold);
                 originalModelCount = boxes.size();
                 Log.d(TAG, "YOLO 检测框数量 = " + boxes.size());
 
@@ -242,6 +283,9 @@ public class DetectActivity extends AppCompatActivity {
                     });
                     return;
                 }
+
+                // 保存原图，便于后续在不同阈值下重新检测
+                originalBitmap = bitmap;
 
                 // 从 Intent 中取出之前保存的框状态
                 ArrayList<PeopleDetector.Box> currentBoxes =
@@ -342,6 +386,73 @@ public class DetectActivity extends AppCompatActivity {
                     : "已进入“编辑模式”：可画框/删除，不再改变缩放";
             Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
         }
+    }
+
+    // ===== 置信度阈值相关逻辑 =====
+
+    /** SeekBar progress(0~80) -> 阈值(0.10~0.90) */
+    private float progressToThreshold(int progress) {
+        float min = 0.10f;
+        float max = 0.90f;
+        float ratio = progress / 80f;
+        return min + (max - min) * ratio;
+    }
+
+    /** 阈值(0.10~0.90) -> SeekBar progress(0~80) */
+    private int thresholdToProgress(float threshold) {
+        float min = 0.10f;
+        float max = 0.90f;
+        float t = Math.max(min, Math.min(max, threshold));
+        return Math.round((t - min) / (max - min) * 80f);
+    }
+
+    /** 更新 TextView 显示当前置信度阈值 */
+    private void updateConfLabel() {
+        if (tvConfLabel != null) {
+            tvConfLabel.setText(String.format("置信度阈值：%.2f", confThreshold));
+        }
+    }
+
+    /** 当用户调整置信度阈值后触发 */
+    private void onConfThresholdChanged() {
+        if (originalBitmap == null) return;
+
+        // 再次编辑 + 已经有手动画框或模型框被改动 -> 提醒用户
+        if (hasInitialStateFromOutside &&
+                (overlayView.getManualBoxCount() > 0 ||
+                        overlayView.getModelBoxCount() != originalModelCount)) {
+
+            new AlertDialog.Builder(this)
+                    .setTitle("重新检测")
+                    .setMessage("修改置信度会重新跑检测，并清空当前的编辑结果，是否继续？")
+                    .setPositiveButton("继续", (d, w) -> redoDetectWithNewThreshold())
+                    .setNegativeButton("取消", null)
+                    .show();
+        } else {
+            redoDetectWithNewThreshold();
+        }
+    }
+
+    /** 按当前阈值重新跑一次检测 */
+    private void redoDetectWithNewThreshold() {
+        if (originalBitmap == null) return;
+
+        new Thread(() -> {
+            // 如果担心 Bitmap 很大，可以在这里做 copy/缩放再跑，这里直接用原图
+            List<PeopleDetector.Box> newBoxes =
+                    peopleDetector.detectPeople(originalBitmap, confThreshold);
+            originalModelCount = newBoxes.size();
+
+            runOnUiThread(() -> {
+                overlayView.setResults(newBoxes,
+                        originalBitmap.getWidth(),
+                        originalBitmap.getHeight());
+                updateCounts();
+                Toast.makeText(this,
+                        "已按新置信度重新检测，人数：" + newBoxes.size(),
+                        Toast.LENGTH_SHORT).show();
+            });
+        }).start();
     }
 }
 

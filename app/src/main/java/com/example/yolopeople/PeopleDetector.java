@@ -29,7 +29,8 @@ public class PeopleDetector {
     private static final int NUM_CLASSES = 80;
     private static final int OUTPUT_DIM = 5 + NUM_CLASSES; // 85
 
-    private static final float CONF_THRESHOLD = 0.30f;
+    // 默认置信度阈值，供外部和无参 detectPeople 调用
+    public static final float DEFAULT_CONF_THRESHOLD = 0.30f;
     private static final float NMS_IOU_THRESHOLD = 0.5f;
 
     private final Interpreter interpreter;
@@ -133,8 +134,19 @@ public class PeopleDetector {
 
     /**
      * 对 Bitmap 进行人检测。返回的 Box 坐标是基于原图尺寸。
+     * 默认使用 {@link #DEFAULT_CONF_THRESHOLD} 作为置信度阈值。
      */
     public List<Box> detectPeople(Bitmap originBitmap) {
+        return detectPeople(originBitmap, DEFAULT_CONF_THRESHOLD);
+    }
+
+    /**
+     * 对 Bitmap 进行人检测。返回的 Box 坐标是基于原图尺寸。
+     *
+     * @param originBitmap  原始 Bitmap
+     * @param confThreshold 置信度阈值（0~1）
+     */
+    public List<Box> detectPeople(Bitmap originBitmap, float confThreshold) {
         if (originBitmap == null) return new ArrayList<>();
 
         int origW = originBitmap.getWidth();
@@ -166,7 +178,7 @@ public class PeopleDetector {
         Log.d(TAG, "TFLite 推理耗时: " + (t1 - t0) + " ms");
 
         // 4. 解析检测结果（只保留 person 类）
-        List<Box> all = parseDetections(output);
+        List<Box> all = parseDetections(output, confThreshold);
 
         // 5. NMS
         List<Box> nms = nonMaxSuppression(all, NMS_IOU_THRESHOLD);
@@ -187,7 +199,7 @@ public class PeopleDetector {
         return nms;
     }
 
-    private List<Box> parseDetections(float[][][] output) {
+    private List<Box> parseDetections(float[][][] output, float confThreshold) {
         List<Box> result = new ArrayList<>();
 
         float[][] preds = output[0];
@@ -221,8 +233,8 @@ public class PeopleDetector {
                 continue;   // 只要人
             }
 
-            // 阈值稍微高一点，避免太乱
-            if (finalConf < 0.30f) {
+            // 使用传入的置信度阈值过滤结果
+            if (finalConf < confThreshold) {
                 continue;
             }
 

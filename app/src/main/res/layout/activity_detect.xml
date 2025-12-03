@@ -84,6 +84,30 @@
             android:text="删除模型框: 0"
             android:textSize="14sp" />
 
+        <!-- 置信度设置区域 -->
+        <LinearLayout
+            android:id="@+id/layout_conf"
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:padding="8dp">
+
+            <TextView
+                android:id="@+id/tv_conf_label"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="置信度阈值：0.30"
+                android:textSize="14sp" />
+
+            <SeekBar
+                android:id="@+id/seek_conf"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:max="80"
+                android:progress="20" />
+        </LinearLayout>
+
         <LinearLayout
             android:id="@+id/layout_buttons"
             android:layout_width="match_parent"
