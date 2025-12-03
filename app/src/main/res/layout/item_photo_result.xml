@@ -26,12 +26,25 @@
             android:text="图片 1  人数：0"
             android:textSize="16sp" />
 
-        <Button
-            android:id="@+id/btn_edit"
+        <LinearLayout
             android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="再次编辑"
-            android:layout_marginTop="8dp" />
+            android:orientation="horizontal"
+            android:layout_marginTop="8dp">
+
+            <Button
+                android:id="@+id/btn_edit"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="再次编辑" />
+
+            <Button
+                android:id="@+id/btn_delete"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="删除"
+                android:layout_marginStart="8dp" />
+        </LinearLayout>
     </LinearLayout>
 
 </LinearLayout>

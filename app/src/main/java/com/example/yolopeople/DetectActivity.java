@@ -26,6 +26,7 @@ public class DetectActivity extends AppCompatActivity {
 
     public static final String EXTRA_IMAGE_URI = "image_uri";
     public static final String EXTRA_RESULT_TOTAL_COUNT = "result_total_count";
+    public static final String EXTRA_DELETE_PHOTO = "delete_photo";
 
     // ★ 新增：状态传递用
     public static final String EXTRA_BOXES_MODEL = "boxes_model";
@@ -36,19 +37,22 @@ public class DetectActivity extends AppCompatActivity {
 
     private ImageView ivResult;
     private DetectOverlayView overlayView;
+    private ZoomLayout zoomContainer;
     private TextView tvModelCount, tvManualCount, tvDeletedCount, tvTotalCount;
-    private Button btnClearManual, btnRestoreModel, btnBack, btnConfirm;
+    private Button btnClearManual, btnRestoreModel, btnBack, btnConfirm, btnZoomMode, btnDeletePhoto;
 
     private PeopleDetector peopleDetector;
     private int originalModelCount = 0;   // 初始模型框数量（用来算删了多少）
 
-    private String imageUriStr;           // ⭐ 当前图片的 Uri 字符串
+    private String imageUriStr;           // 当前图片的 Uri 字符串
+    private boolean isZoomMode = false;
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_detect);
 
+        zoomContainer   = findViewById(R.id.zoom_container);
         ivResult        = findViewById(R.id.iv_result);
         overlayView     = findViewById(R.id.detect_overlay);
         tvModelCount    = findViewById(R.id.tv_model_count);
@@ -58,7 +62,11 @@ public class DetectActivity extends AppCompatActivity {
         btnClearManual  = findViewById(R.id.btn_clear_manual);
         btnRestoreModel = findViewById(R.id.btn_restore_model);
         btnBack         = findViewById(R.id.btn_back);
-        btnConfirm      = findViewById(R.id.btn_confirm);   // ⭐ 新增
+        btnConfirm      = findViewById(R.id.btn_confirm);
+        btnZoomMode     = findViewById(R.id.btn_zoom_mode);
+        btnDeletePhoto  = findViewById(R.id.btn_delete_photo);
+
+        updateZoomModeUI(false);
 
         peopleDetector = new PeopleDetector(getApplicationContext());
 
@@ -85,11 +93,19 @@ public class DetectActivity extends AppCompatActivity {
             updateCounts();
         });
 
+        // 缩放模式切换
+        btnZoomMode.setOnClickListener(v -> {
+            isZoomMode = !isZoomMode;
+            updateZoomModeUI(true);
+        });
+
         // 返回按钮：保存并返回结果
         btnBack.setOnClickListener(v -> finishWithResult());
 
-        // ⭐ 确认按钮：回传统计结果（保留兼容性，功能与返回按钮相同）
+        // 确认按钮：回传统计结果（保留兼容性，功能与返回按钮相同）
         btnConfirm.setOnClickListener(v -> finishWithResult());
+
+        btnDeletePhoto.setOnClickListener(v -> showDeletePhotoDialog());
 
         // 从 Intent 拿到图片 Uri
         imageUriStr = getIntent().getStringExtra(EXTRA_IMAGE_URI);
@@ -104,10 +120,10 @@ public class DetectActivity extends AppCompatActivity {
         boolean hasState = getIntent().hasExtra(EXTRA_IMAGE_WIDTH);
 
         if (hasState) {
-            // ★ 再次编辑：恢复旧状态
+            // 再次编辑：恢复旧状态
             restoreStateAndShow(imageUri);
         } else {
-            // ★ 第一次：正常跑检测
+            // 第一次：正常跑检测
             loadAndDetect(imageUri);
         }
     }
@@ -143,6 +159,11 @@ public class DetectActivity extends AppCompatActivity {
                 Log.d(TAG, "YOLO 检测框数量 = " + boxes.size());
 
                 runOnUiThread(() -> {
+                    isZoomMode = false;
+                    updateZoomModeUI(false);
+                    if (zoomContainer != null) {
+                        zoomContainer.resetZoom();
+                    }
                     ivResult.setImageBitmap(bitmap);
                     overlayView.setResults(boxes, bitmap.getWidth(), bitmap.getHeight());
                     updateCounts();
@@ -222,7 +243,7 @@ public class DetectActivity extends AppCompatActivity {
                     return;
                 }
 
-                // ★ 从 Intent 中取出之前保存的框状态
+                // 从 Intent 中取出之前保存的框状态
                 ArrayList<PeopleDetector.Box> currentBoxes =
                         getIntent().getParcelableArrayListExtra(EXTRA_BOXES_MODEL);
                 ArrayList<PeopleDetector.Box> originalBoxes =
@@ -235,6 +256,11 @@ public class DetectActivity extends AppCompatActivity {
                 originalModelCount = (originalBoxes != null) ? originalBoxes.size() : 0;
 
                 runOnUiThread(() -> {
+                    isZoomMode = false;
+                    updateZoomModeUI(false);
+                    if (zoomContainer != null) {
+                        zoomContainer.resetZoom();
+                    }
                     ivResult.setImageBitmap(bitmap);
                     overlayView.setResultsWithState(currentBoxes, originalBoxes, manualBoxes, imgW, imgH);
                     updateCounts();
@@ -279,11 +305,42 @@ public class DetectActivity extends AppCompatActivity {
                 .show();
     }
 
+    /** 删除整张图片（本次统计忽略） */
+    private void showDeletePhotoDialog() {
+        new AlertDialog.Builder(this)
+                .setTitle("删除图片")
+                .setMessage("确定从本次统计中删除这张图片吗？")
+                .setPositiveButton("删除", (dialog, which) -> {
+                    Intent resultIntent = new Intent();
+                    resultIntent.putExtra(EXTRA_IMAGE_URI, imageUriStr);
+                    resultIntent.putExtra(EXTRA_DELETE_PHOTO, true);
+                    setResult(RESULT_FIRST_USER, resultIntent);
+                    finish();
+                })
+                .setNegativeButton("取消", null)
+                .show();
+    }
+
     @Override
     protected void onDestroy() {
         super.onDestroy();
         if (peopleDetector != null) {
             peopleDetector.close();
+        }
+    }
+
+    private void updateZoomModeUI(boolean showToast) {
+        if (zoomContainer != null) {
+            zoomContainer.setZoomEnabled(isZoomMode);
+        }
+        if (btnZoomMode != null) {
+            btnZoomMode.setText(isZoomMode ? "切到编辑模式" : "进入缩放模式");
+        }
+        if (showToast) {
+            String msg = isZoomMode
+                    ? "已进入“缩放模式”：可双指缩放/拖动，无法画框"
+                    : "已进入“编辑模式”：可画框/删除，不再改变缩放";
+            Toast.makeText(this, msg, Toast.LENGTH_SHORT).show();
         }
     }
 }

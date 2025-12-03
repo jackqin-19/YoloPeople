@@ -298,11 +298,10 @@ public class StatsActivity extends AppCompatActivity {
     protected void onActivityResult(int requestCode, int resultCode, @Nullable Intent data) {
         super.onActivityResult(requestCode, resultCode, data);
 
-        if (resultCode != RESULT_OK) {
-            return;
-        }
-
         if (requestCode == REQ_CAMERA) {
+            if (resultCode != RESULT_OK) {
+                return;
+            }
             if (currentPhotoPath != null) {
                 File photoFile = new File(currentPhotoPath);
                 if (photoFile.exists()) {
@@ -320,6 +319,9 @@ public class StatsActivity extends AppCompatActivity {
             }
 
         } else if (requestCode == REQ_GALLERY) {
+            if (resultCode != RESULT_OK) {
+                return;
+            }
             if (data != null) {
                 Uri srcUri = data.getData();
                 if (srcUri != null) {
@@ -334,24 +336,66 @@ public class StatsActivity extends AppCompatActivity {
                 }
             }
 
-        } else if (requestCode == REQ_DETECT_NEW && data != null) {
-            PhotoResult pr = new PhotoResult();
-            if (fillPhotoResultFromIntent(pr, data)) {
-                photoResults.add(pr);
-                adapter.notifyItemInserted(photoResults.size() - 1);
+        } else if (requestCode == REQ_DETECT_NEW) {
+            handleDetectNewResult(resultCode, data);
+
+        } else if (requestCode == REQ_DETECT_EDIT) {
+            handleDetectEditResult(resultCode, data);
+        }
+    }
+
+    private void handleDetectNewResult(int resultCode, @Nullable Intent data) {
+        if (data == null) {
+            return;
+        }
+
+        if (resultCode == RESULT_FIRST_USER &&
+                data.getBooleanExtra(DetectActivity.EXTRA_DELETE_PHOTO, false)) {
+            return;
+        }
+
+        if (resultCode != RESULT_OK) {
+            return;
+        }
+
+        PhotoResult pr = new PhotoResult();
+        if (fillPhotoResultFromIntent(pr, data)) {
+            photoResults.add(pr);
+            adapter.notifyItemInserted(photoResults.size() - 1);
+            updateTotalCount();
+        }
+    }
+
+    private void handleDetectEditResult(int resultCode, @Nullable Intent data) {
+        if (data == null) {
+            editingIndex = -1;
+            return;
+        }
+
+        if (resultCode == RESULT_FIRST_USER &&
+                data.getBooleanExtra(DetectActivity.EXTRA_DELETE_PHOTO, false)) {
+            if (editingIndex >= 0 && editingIndex < photoResults.size()) {
+                photoResults.remove(editingIndex);
+                adapter.notifyItemRemoved(editingIndex);
                 updateTotalCount();
             }
-
-        } else if (requestCode == REQ_DETECT_EDIT && data != null) {
-            if (editingIndex >= 0 && editingIndex < photoResults.size()) {
-                PhotoResult target = photoResults.get(editingIndex);
-                if (fillPhotoResultFromIntent(target, data)) {
-                    adapter.notifyItemChanged(editingIndex);
-                    updateTotalCount();
-                }
-            }
             editingIndex = -1;
+            return;
         }
+
+        if (resultCode != RESULT_OK) {
+            editingIndex = -1;
+            return;
+        }
+
+        if (editingIndex >= 0 && editingIndex < photoResults.size()) {
+            PhotoResult target = photoResults.get(editingIndex);
+            if (fillPhotoResultFromIntent(target, data)) {
+                adapter.notifyItemChanged(editingIndex);
+                updateTotalCount();
+            }
+        }
+        editingIndex = -1;
     }
 
     private boolean fillPhotoResultFromIntent(PhotoResult pr, Intent data) {
@@ -541,12 +585,14 @@ public class StatsActivity extends AppCompatActivity {
         private final android.widget.ImageView ivThumb;
         private final android.widget.TextView tvInfo;
         private final android.widget.Button btnEdit;
+        private final android.widget.Button btnDelete;
 
         PhotoResultViewHolder(android.view.View itemView) {
             super(itemView);
             ivThumb = itemView.findViewById(R.id.iv_thumb);
             tvInfo = itemView.findViewById(R.id.tv_info);
             btnEdit = itemView.findViewById(R.id.btn_edit);
+            btnDelete = itemView.findViewById(R.id.btn_delete);
         }
 
         void bind(PhotoResult pr, int position) {
@@ -554,6 +600,21 @@ public class StatsActivity extends AppCompatActivity {
             ivThumb.setImageURI(uri);
             tvInfo.setText("图片 " + (position + 1) + "  人数：" + pr.totalCount);
             btnEdit.setOnClickListener(v -> openDetectForEdit(position));
+            btnDelete.setOnClickListener(v -> {
+                new androidx.appcompat.app.AlertDialog.Builder(StatsActivity.this)
+                        .setTitle("删除图片")
+                        .setMessage("确定从本次统计中删除这张图片吗？")
+                        .setPositiveButton("删除", (dialog, which) -> {
+                            int pos = getAdapterPosition();
+                            if (pos != RecyclerView.NO_POSITION) {
+                                photoResults.remove(pos);
+                                adapter.notifyItemRemoved(pos);
+                                updateTotalCount();
+                            }
+                        })
+                        .setNegativeButton("取消", null)
+                        .show();
+            });
         }
     }
 }

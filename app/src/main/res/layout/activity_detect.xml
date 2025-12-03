@@ -27,11 +27,13 @@
             android:layout_marginStart="16dp" />
     </LinearLayout>
 
-    <!-- 图片 + 叠加层（用 FrameLayout 堆叠） -->
-    <FrameLayout
+    <!-- 图片 + 叠加层（带缩放的容器） -->
+    <com.example.yolopeople.ZoomLayout
+        android:id="@+id/zoom_container"
         android:layout_width="match_parent"
         android:layout_height="0dp"
-        android:layout_weight="1">
+        android:layout_weight="1"
+        android:layout_margin="8dp">
 
         <ImageView
             android:id="@+id/iv_result"
@@ -44,7 +46,7 @@
             android:id="@+id/detect_overlay"
             android:layout_width="match_parent"
             android:layout_height="match_parent" />
-    </FrameLayout>
+    </com.example.yolopeople.ZoomLayout>
 
     <!-- 底部人数统计 + 操作按钮 -->
     <LinearLayout
@@ -83,6 +85,7 @@
             android:textSize="14sp" />
 
         <LinearLayout
+            android:id="@+id/layout_buttons"
             android:layout_width="match_parent"
             android:layout_height="wrap_content"
             android:orientation="horizontal"
@@ -103,6 +106,22 @@
                 android:layout_weight="1"
                 android:text="恢复模型框"
                 android:layout_marginStart="8dp" />
+
+            <Button
+                android:id="@+id/btn_zoom_mode"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:text="进入缩放模式"
+                android:layout_marginStart="8dp" />
+
+            <Button
+                android:id="@+id/btn_delete_photo"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:text="删除本图片" />
 
             <Button
                 android:id="@+id/btn_confirm"
