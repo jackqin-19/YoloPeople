@@ -29,6 +29,8 @@
             </intent-filter>
         </activity>
 
+        <activity android:name=".DetectActivity" />
+
         <!-- FileProvider 用于相机拍照保存原图 -->
         <provider
             android:name="androidx.core.content.FileProvider"

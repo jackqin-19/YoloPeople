@@ -1,0 +1,109 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:orientation="vertical"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent">
+
+    <!-- 顶部标题栏 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="48dp"
+        android:orientation="horizontal"
+        android:gravity="center_vertical"
+        android:padding="8dp">
+
+        <Button
+            android:id="@+id/btn_back"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="返回" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="人数识别"
+            android:textSize="18sp"
+            android:textStyle="bold"
+            android:layout_marginStart="16dp" />
+    </LinearLayout>
+
+    <!-- 图片 + 叠加层（用 FrameLayout 堆叠） -->
+    <FrameLayout
+        android:layout_width="match_parent"
+        android:layout_height="0dp"
+        android:layout_weight="1">
+
+        <ImageView
+            android:id="@+id/iv_result"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent"
+            android:scaleType="fitCenter"
+            android:adjustViewBounds="true" />
+
+        <com.example.yolopeople.DetectOverlayView
+            android:id="@+id/detect_overlay"
+            android:layout_width="match_parent"
+            android:layout_height="match_parent" />
+    </FrameLayout>
+
+    <!-- 底部人数统计 + 操作按钮 -->
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:orientation="vertical"
+        android:padding="8dp">
+
+        <TextView
+            android:id="@+id/tv_total_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="总人数: 0"
+            android:textSize="18sp"
+            android:textStyle="bold" />
+
+        <TextView
+            android:id="@+id/tv_model_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="模型识别: 0"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/tv_manual_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="手动画框: 0"
+            android:textSize="14sp" />
+
+        <TextView
+            android:id="@+id/tv_deleted_count"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:text="删除模型框: 0"
+            android:textSize="14sp" />
+
+        <LinearLayout
+            android:layout_width="match_parent"
+            android:layout_height="wrap_content"
+            android:orientation="horizontal"
+            android:gravity="end"
+            android:layout_marginTop="8dp">
+
+            <Button
+                android:id="@+id/btn_clear_manual"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="清除手动画框" />
+
+            <Button
+                android:id="@+id/btn_restore_model"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="恢复模型识别框"
+                android:layout_marginStart="8dp" />
+        </LinearLayout>
+
+    </LinearLayout>
+
+</LinearLayout>
+
