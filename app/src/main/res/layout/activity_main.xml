@@ -1,22 +1,24 @@
 <?xml version="1.0" encoding="utf-8"?>
 <LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
-    android:orientation="vertical"
-    android:gravity="center"
-    android:padding="24dp"
     android:layout_width="match_parent"
-    android:layout_height="match_parent">
+    android:layout_height="match_parent"
+    android:gravity="center"
+    android:orientation="vertical"
+    android:padding="24dp">
+
+    <TextView
+        android:id="@+id/tv_title"
+        android:layout_width="wrap_content"
+        android:layout_height="wrap_content"
+        android:text="教室人数统计"
+        android:textSize="24sp"
+        android:textStyle="bold"
+        android:paddingBottom="24dp"/>
 
     <Button
-        android:id="@+id/btn_camera"
-        android:layout_width="match_parent"
+        android:id="@+id/btn_start_detect"
+        android:layout_width="wrap_content"
         android:layout_height="wrap_content"
-        android:text="拍照识别"
-        android:layout_marginBottom="16dp" />
-
-    <Button
-        android:id="@+id/btn_gallery"
-        android:layout_width="match_parent"
-        android:layout_height="wrap_content"
-        android:text="从相册选择图片识别" />
+        android:text="开始识别" />
 
 </LinearLayout>

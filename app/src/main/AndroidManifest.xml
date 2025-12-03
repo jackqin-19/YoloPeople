@@ -17,11 +17,11 @@
         android:roundIcon="@mipmap/ic_launcher_round"
         android:supportsRtl="true"
         android:theme="@style/Theme.YoloPeople">
+        <!-- 首页：只有一个"开始识别"按钮 -->
         <activity
             android:name=".MainActivity"
             android:exported="true"
-            android:label="@string/app_name"
-            android:theme="@style/Theme.AppCompat.Light.DarkActionBar">
+            android:label="@string/app_name">
             <intent-filter>
                 <action android:name="android.intent.action.MAIN" />
 
@@ -29,6 +29,10 @@
             </intent-filter>
         </activity>
 
+        <!-- 统计页：多图列表 + 总人数 -->
+        <activity android:name=".StatsActivity" />
+
+        <!-- 单张图识别编辑页 -->
         <activity android:name=".DetectActivity" />
 
         <!-- FileProvider 用于相机拍照保存原图 -->

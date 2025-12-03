@@ -4,6 +4,8 @@ import android.content.Context;
 import android.content.res.AssetFileDescriptor;
 import android.graphics.Bitmap;
 import android.graphics.Color;
+import android.os.Parcel;
+import android.os.Parcelable;
 import android.util.Log;
 
 import org.tensorflow.lite.Interpreter;
@@ -32,9 +34,55 @@ public class PeopleDetector {
 
     private final Interpreter interpreter;
 
-    public static class Box {
+    public static class Box implements Parcelable {
         public float left, top, right, bottom;
         public float confidence;
+
+        public Box() {}
+
+        // 拷贝构造（可选，方便复制）
+        public Box(Box other) {
+            this.left = other.left;
+            this.top = other.top;
+            this.right = other.right;
+            this.bottom = other.bottom;
+            this.confidence = other.confidence;
+        }
+
+        // Parcelable 部分
+        protected Box(Parcel in) {
+            left = in.readFloat();
+            top = in.readFloat();
+            right = in.readFloat();
+            bottom = in.readFloat();
+            confidence = in.readFloat();
+        }
+
+        public static final Creator<Box> CREATOR = new Creator<Box>() {
+            @Override
+            public Box createFromParcel(Parcel in) {
+                return new Box(in);
+            }
+
+            @Override
+            public Box[] newArray(int size) {
+                return new Box[size];
+            }
+        };
+
+        @Override
+        public int describeContents() {
+            return 0;
+        }
+
+        @Override
+        public void writeToParcel(Parcel dest, int flags) {
+            dest.writeFloat(left);
+            dest.writeFloat(top);
+            dest.writeFloat(right);
+            dest.writeFloat(bottom);
+            dest.writeFloat(confidence);
+        }
     }
 
     public PeopleDetector(Context context) {

@@ -7,6 +7,7 @@ import android.content.ContentResolver;
 import android.content.Intent;
 import android.graphics.Bitmap;
 import android.graphics.BitmapFactory;
+import android.graphics.RectF;
 import android.net.Uri;
 import android.os.Bundle;
 import android.util.Log;
@@ -16,6 +17,7 @@ import android.widget.TextView;
 import android.widget.Toast;
 
 import java.io.InputStream;
+import java.util.ArrayList;
 import java.util.List;
 
 public class DetectActivity extends AppCompatActivity {
@@ -23,14 +25,24 @@ public class DetectActivity extends AppCompatActivity {
     private static final String TAG = "DetectActivity";
 
     public static final String EXTRA_IMAGE_URI = "image_uri";
+    public static final String EXTRA_RESULT_TOTAL_COUNT = "result_total_count";
+
+    // ★ 新增：状态传递用
+    public static final String EXTRA_BOXES_MODEL = "boxes_model";
+    public static final String EXTRA_BOXES_MODEL_ORIG = "boxes_model_orig";
+    public static final String EXTRA_BOXES_MANUAL = "boxes_manual";
+    public static final String EXTRA_IMAGE_WIDTH = "image_width";
+    public static final String EXTRA_IMAGE_HEIGHT = "image_height";
 
     private ImageView ivResult;
     private DetectOverlayView overlayView;
     private TextView tvModelCount, tvManualCount, tvDeletedCount, tvTotalCount;
-    private Button btnClearManual, btnRestoreModel, btnBack;
+    private Button btnClearManual, btnRestoreModel, btnBack, btnConfirm;
 
     private PeopleDetector peopleDetector;
     private int originalModelCount = 0;   // 初始模型框数量（用来算删了多少）
+
+    private String imageUriStr;           // ⭐ 当前图片的 Uri 字符串
 
     @Override
     protected void onCreate(Bundle savedInstanceState) {
@@ -46,6 +58,7 @@ public class DetectActivity extends AppCompatActivity {
         btnClearManual  = findViewById(R.id.btn_clear_manual);
         btnRestoreModel = findViewById(R.id.btn_restore_model);
         btnBack         = findViewById(R.id.btn_back);
+        btnConfirm      = findViewById(R.id.btn_confirm);   // ⭐ 新增
 
         peopleDetector = new PeopleDetector(getApplicationContext());
 
@@ -72,18 +85,31 @@ public class DetectActivity extends AppCompatActivity {
             updateCounts();
         });
 
-        btnBack.setOnClickListener(v -> finish());
+        // 返回按钮：保存并返回结果
+        btnBack.setOnClickListener(v -> finishWithResult());
+
+        // ⭐ 确认按钮：回传统计结果（保留兼容性，功能与返回按钮相同）
+        btnConfirm.setOnClickListener(v -> finishWithResult());
 
         // 从 Intent 拿到图片 Uri
-        String uriStr = getIntent().getStringExtra(EXTRA_IMAGE_URI);
-        if (uriStr == null) {
+        imageUriStr = getIntent().getStringExtra(EXTRA_IMAGE_URI);
+        if (imageUriStr == null) {
             Toast.makeText(this, "没有收到图片", Toast.LENGTH_SHORT).show();
             finish();
             return;
         }
+        Uri imageUri = Uri.parse(imageUriStr);
 
-        Uri imageUri = Uri.parse(uriStr);
-        loadAndDetect(imageUri);
+        // 判断是不是"带状态再次编辑"
+        boolean hasState = getIntent().hasExtra(EXTRA_IMAGE_WIDTH);
+
+        if (hasState) {
+            // ★ 再次编辑：恢复旧状态
+            restoreStateAndShow(imageUri);
+        } else {
+            // ★ 第一次：正常跑检测
+            loadAndDetect(imageUri);
+        }
     }
 
     /** 加载图片并做检测 */
@@ -133,13 +159,105 @@ public class DetectActivity extends AppCompatActivity {
         }).start();
     }
 
+    /** 当前这张图的总人数 = 模型框 + 手动画框 */
+    private int getCurrentTotalCount() {
+        int currentModel = overlayView.getModelBoxCount();
+        int manual = overlayView.getManualBoxCount();
+        return currentModel + manual;
+    }
+
+    /** 带状态地结束当前页 */
+    private void finishWithResult() {
+        int total = getCurrentTotalCount();
+
+        Intent resultIntent = new Intent();
+        String uriStr = getIntent().getStringExtra(EXTRA_IMAGE_URI);
+        if (uriStr != null) {
+            resultIntent.putExtra(EXTRA_IMAGE_URI, uriStr);
+        }
+        resultIntent.putExtra(EXTRA_RESULT_TOTAL_COUNT, total);
+
+        // ★ 把当前状态全带回去
+        resultIntent.putExtra(EXTRA_IMAGE_WIDTH, overlayView.getImageWidth());
+        resultIntent.putExtra(EXTRA_IMAGE_HEIGHT, overlayView.getImageHeight());
+        resultIntent.putParcelableArrayListExtra(
+                EXTRA_BOXES_MODEL,
+                overlayView.getCurrentModelBoxesCopy()
+        );
+        resultIntent.putParcelableArrayListExtra(
+                EXTRA_BOXES_MODEL_ORIG,
+                overlayView.getOriginalModelBoxesCopy()
+        );
+        resultIntent.putParcelableArrayListExtra(
+                EXTRA_BOXES_MANUAL,
+                overlayView.getManualBoxesCopy()
+        );
+
+        setResult(RESULT_OK, resultIntent);
+        finish();
+    }
+
+    /** 再次编辑：恢复之前保存的框状态 */
+    private void restoreStateAndShow(Uri uri) {
+        new Thread(() -> {
+            try {
+                // 把图片加载出来显示（和以前一样）
+                ContentResolver cr = getContentResolver();
+                InputStream is = cr.openInputStream(uri);
+                if (is == null) {
+                    runOnUiThread(() -> {
+                        Toast.makeText(this, "无法读取图片", Toast.LENGTH_SHORT).show();
+                        finish();
+                    });
+                    return;
+                }
+                Bitmap bitmap = BitmapFactory.decodeStream(is);
+                is.close();
+
+                if (bitmap == null) {
+                    runOnUiThread(() -> {
+                        Toast.makeText(this, "图片解码失败", Toast.LENGTH_SHORT).show();
+                        finish();
+                    });
+                    return;
+                }
+
+                // ★ 从 Intent 中取出之前保存的框状态
+                ArrayList<PeopleDetector.Box> currentBoxes =
+                        getIntent().getParcelableArrayListExtra(EXTRA_BOXES_MODEL);
+                ArrayList<PeopleDetector.Box> originalBoxes =
+                        getIntent().getParcelableArrayListExtra(EXTRA_BOXES_MODEL_ORIG);
+                ArrayList<RectF> manualBoxes =
+                        getIntent().getParcelableArrayListExtra(EXTRA_BOXES_MANUAL);
+                int imgW = getIntent().getIntExtra(EXTRA_IMAGE_WIDTH, bitmap.getWidth());
+                int imgH = getIntent().getIntExtra(EXTRA_IMAGE_HEIGHT, bitmap.getHeight());
+
+                originalModelCount = (originalBoxes != null) ? originalBoxes.size() : 0;
+
+                runOnUiThread(() -> {
+                    ivResult.setImageBitmap(bitmap);
+                    overlayView.setResultsWithState(currentBoxes, originalBoxes, manualBoxes, imgW, imgH);
+                    updateCounts();
+                    Toast.makeText(this, "已恢复上次编辑状态", Toast.LENGTH_SHORT).show();
+                });
+
+            } catch (Exception e) {
+                e.printStackTrace();
+                runOnUiThread(() -> {
+                    Toast.makeText(this, "加载图片失败: " + e.getMessage(), Toast.LENGTH_SHORT).show();
+                    finish();
+                });
+            }
+        }).start();
+    }
+
     /** 更新人数统计 */
     private void updateCounts() {
         int currentModel = overlayView.getModelBoxCount();
         int manual = overlayView.getManualBoxCount();
         int deletedModel = originalModelCount - currentModel;
         if (deletedModel < 0) deletedModel = 0;
-        int total = currentModel + manual;
+        int total = getCurrentTotalCount();
 
         tvModelCount.setText("模型识别: " + currentModel);
         tvManualCount.setText("手动画框: " + manual);

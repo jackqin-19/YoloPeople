@@ -91,16 +91,26 @@
 
             <Button
                 android:id="@+id/btn_clear_manual"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="清除手动画框" />
+                android:layout_weight="1"
+                android:text="清空手动画框" />
 
             <Button
                 android:id="@+id/btn_restore_model"
-                android:layout_width="wrap_content"
+                android:layout_width="0dp"
                 android:layout_height="wrap_content"
-                android:text="恢复模型识别框"
+                android:layout_weight="1"
+                android:text="恢复模型框"
                 android:layout_marginStart="8dp" />
+
+            <Button
+                android:id="@+id/btn_confirm"
+                android:layout_width="0dp"
+                android:layout_height="wrap_content"
+                android:layout_weight="1"
+                android:layout_marginStart="8dp"
+                android:text="保存人数并返回" />
         </LinearLayout>
 
     </LinearLayout>

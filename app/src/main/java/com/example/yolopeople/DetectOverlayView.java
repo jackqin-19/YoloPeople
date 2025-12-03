@@ -131,6 +131,24 @@ public class DetectOverlayView extends View {
         invalidate(); // 触发重绘
     }
 
+    /**
+     * 从外部传入完整状态（再次编辑时恢复用）
+     */
+    public void setResultsWithState(List<PeopleDetector.Box> currentBoxes,
+                                    List<PeopleDetector.Box> originalBoxes,
+                                    List<RectF> manualBoxes,
+                                    int imageWidth,
+                                    int imageHeight) {
+        this.boxes = (currentBoxes != null) ? new ArrayList<>(currentBoxes) : new ArrayList<>();
+        this.originalBoxes = (originalBoxes != null) ? new ArrayList<>(originalBoxes) : new ArrayList<>();
+        this.manualBoxes = (manualBoxes != null) ? new ArrayList<>(manualBoxes) : new ArrayList<>();
+
+        this.imageWidth = imageWidth;
+        this.imageHeight = imageHeight;
+
+        invalidate();
+    }
+
     /** 清除所有手动画框 */
     public void clearManualBoxes() {
         manualBoxes.clear();
@@ -165,6 +183,43 @@ public class DetectOverlayView extends View {
     /** 获取手动画框数量 */
     public int getManualBoxCount() {
         return manualBoxes.size();
+    }
+
+    /** 当前图片原始宽 */
+    public int getImageWidth() {
+        return imageWidth;
+    }
+
+    /** 当前图片原始高 */
+    public int getImageHeight() {
+        return imageHeight;
+    }
+
+    /** 拿到当前"模型框"的一份拷贝 */
+    public ArrayList<PeopleDetector.Box> getCurrentModelBoxesCopy() {
+        ArrayList<PeopleDetector.Box> list = new ArrayList<>();
+        for (PeopleDetector.Box b : boxes) {
+            list.add(new PeopleDetector.Box(b));
+        }
+        return list;
+    }
+
+    /** 拿到"初始模型框"一份拷贝（用于恢复按钮） */
+    public ArrayList<PeopleDetector.Box> getOriginalModelBoxesCopy() {
+        ArrayList<PeopleDetector.Box> list = new ArrayList<>();
+        for (PeopleDetector.Box b : originalBoxes) {
+            list.add(new PeopleDetector.Box(b));
+        }
+        return list;
+    }
+
+    /** 拿到当前手动画框列表的一份拷贝 */
+    public ArrayList<RectF> getManualBoxesCopy() {
+        ArrayList<RectF> list = new ArrayList<>();
+        for (RectF r : manualBoxes) {
+            list.add(new RectF(r));
+        }
+        return list;
     }
 
     @Override
