@@ -32,6 +32,9 @@
         <!-- 统计页：多图列表 + 总人数 -->
         <activity android:name=".StatsActivity" />
 
+        <!-- 历史记录列表页 -->
+        <activity android:name=".HistoryActivity" />
+
         <!-- 单张图识别编辑页 -->
         <activity android:name=".DetectActivity" />
 
