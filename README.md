@@ -1,94 +1,109 @@
-# YoloPeople Demo - 人数检测最小可运行版本
+# YoloPeople - 基于YOLOv5的Android人物检测应用
 
-这是一个干净的、最小可运行的 YOLOv5 人数检测 Android Demo 工程。
+YoloPeople是一个基于YOLOv5和TensorFlow Lite的Android人物检测应用，能够快速识别图片中的人物并提供交互式编辑功能。
 
-## 功能
+## 功能特点
 
-- ✅ 加载 TFLite 模型（YOLOv5）
-- ✅ 在图片上进行人数检测
-- ✅ 在图片上画出红色检测框
-- ✅ 显示检测结果
+- 📸 **人物自动检测**：使用YOLOv5s模型自动识别图片中的人物
+- ✏️ **交互式编辑**：支持手动添加、删除检测框，调整检测结果
+- 🎛️ **置信度阈值调整**：可调节置信度阈值，重新进行检测
+- 🔍 **缩放查看**：支持图片缩放，方便查看细节
+- 📊 **统计功能**：记录检测到的总人数和手动编辑信息
+- 📝 **历史记录**：保存检测历史，支持查看和管理
 
-## 设置步骤
+## 技术栈
 
-### 1. 添加模型文件
-
-将你的 `yolov5s-fp16.tflite` 模型文件复制到：
-
-```
-app/src/main/assets/yolov5s-fp16.tflite
-```
-
-**重要**：文件名必须完全一致：`yolov5s-fp16.tflite`
-
-### 2. 添加测试图片
-
-准备一张包含人物的测试图片（如教室场景），命名为 `classroom.jpg` 或 `classroom.png`，放到：
-
-```
-app/src/main/res/drawable/classroom.jpg
-```
-
-或者
-
-```
-app/src/main/res/drawable/classroom.png
-```
-
-### 3. 构建和运行
-
-1. 在 Android Studio 中打开项目
-2. 等待 Gradle 同步完成
-3. 连接 Android 设备或启动模拟器
-4. 点击 Run 按钮
-
-## 使用说明
-
-1. 启动 App 后，会看到一个按钮和一个 ImageView
-2. 点击"运行 YOLOv5 人数检测"按钮
-3. App 会：
-   - 加载测试图片
-   - 使用 YOLOv5 模型进行检测
-   - 在图片上画出红色检测框
-   - 显示检测到的人数（Toast 提示）
-4. 查看 Logcat 可以看到详细的检测日志
+- **开发语言**：Java
+- **框架**：Android SDK
+- **深度学习**：TensorFlow Lite
+- **模型**：YOLOv5s-fp16.tflite
+- **构建工具**：Gradle
 
 ## 项目结构
 
 ```
-app/src/main/
-├── assets/
-│   └── yolov5s-fp16.tflite  (需要手动添加)
-├── java/com/example/yolopeople/
-│   ├── MainActivity.java     (主界面)
-│   └── PeopleDetector.java   (检测器类)
-├── res/
-│   ├── drawable/
-│   │   └── classroom.jpg     (需要手动添加测试图片)
-│   └── layout/
-│       └── activity_main.xml (界面布局)
-└── AndroidManifest.xml
+YoloPeople/
+├── app/
+│   ├── src/main/
+│   │   ├── assets/              # 模型文件目录
+│   │   │   └── yolov5s-fp16.tflite
+│   │   ├── java/com/example/yolopeople/
+│   │   │   ├── DetectActivity.java      # 检测界面
+│   │   │   ├── DetectOverlayView.java   # 检测结果绘制
+│   │   │   ├── HistoryActivity.java     # 历史记录
+│   │   │   ├── PeopleDetector.java      # 人物检测核心类
+│   │   │   ├── MainActivity.java        # 主界面
+│   │   │   └── StatsActivity.java       # 统计界面
+│   │   └── res/                   # 资源文件
+│   └── build.gradle
+└── README.md
 ```
 
-## 依赖
+## 核心功能说明
 
-- AndroidX AppCompat
-- TensorFlow Lite 2.15.1
+### 1. 人物检测（PeopleDetector.java）
+- 加载YOLOv5s TensorFlow Lite模型
+- 对输入图片进行预处理和推理
+- 解析检测结果，只保留"person"类别
+- 应用非极大值抑制（NMS）优化检测框
+- 将检测结果映射回原图坐标
 
-## 下一步
+### 2. 检测界面（DetectActivity.java）
+- 显示检测结果和统计信息
+- 支持调整置信度阈值
+- 提供手动编辑检测框的功能
+- 支持图片缩放查看
 
-当这个最小 Demo 能够正常显示红色检测框后，可以继续添加：
+### 3. 结果叠加层（DetectOverlayView.java）
+- 在图片上绘制检测框
+- 支持手动添加新的检测框
+- 长按删除检测框
 
-- 相机拍照功能
-- 从相册选择图片
-- 可编辑的人框
-- SQLite 历史记录
-- 等等...
+## 安装和运行
+
+### 前置条件
+- Android Studio 4.2 或更高版本
+- Android SDK 21 或更高版本
+- Android设备或模拟器（推荐使用真机以获得更好的性能）
+
+### 安装步骤
+1. 克隆或下载项目到本地
+2. 使用Android Studio打开项目
+3. 等待Gradle同步完成
+4. 连接Android设备或启动模拟器
+5. 点击"Run"按钮运行应用
+
+## 使用方法
+
+1. **启动应用**：打开YoloPeople应用
+2. **选择功能**：
+   - 点击"开始检测"进入统计界面
+   - 点击"历史记录"查看之前的检测结果
+3. **添加图片**：在统计界面添加要检测的图片
+4. **查看结果**：图片会自动进行人物检测，显示检测框和人数统计
+5. **编辑结果**：
+   - 长按检测框可删除
+   - 点击空白区域可手动添加检测框
+   - 调整置信度滑块重新检测
+6. **保存结果**：点击返回按钮保存检测结果到历史记录
+
+## 模型说明
+
+- **模型名称**：yolov5s-fp16.tflite
+- **输入尺寸**：640x640
+- **输出**：25200个检测框，每个框包含85个维度（5个坐标+80个类别）
+- **默认置信度阈值**：0.30
+- **NMS IOU阈值**：0.5
+
+## 性能优化
+
+- 使用FP16量化模型，减小模型大小并提高推理速度
+- 多线程推理，充分利用设备CPU资源
+- 图片预处理优化，提高检测效率
 
 ## 注意事项
 
-- 确保模型文件名完全一致
-- 确保测试图片放在正确的 drawable 目录
-- 如果模型加载失败，检查 Logcat 中的错误信息
-- 如果检测不到人，可能是图片中没有人物，或者置信度阈值需要调整
-
+- 模型仅针对"person"类别进行了优化
+- 检测精度和速度受设备性能影响
+- 复杂场景下可能需要手动调整检测结果
+- 大尺寸图片可能会消耗更多内存和处理时间

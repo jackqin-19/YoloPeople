@@ -58,7 +58,7 @@ public class DetectOverlayView extends View {
 
     // 一些 dp/sp
     private final float labelPaddingDp = 0.5f;
-    private final float labelTextSizeSp = 5f;
+    private final float labelTextSizeSp = 3f;
 
     public DetectOverlayView(Context context) {
         this(context, null);
@@ -76,8 +76,8 @@ public class DetectOverlayView extends View {
         float scaledDensity = metrics.scaledDensity;
 
         // 线宽直接按 dp 算，跟屏幕相关，跟图片大小无关
-        float boxStrokeWidthPx = 2f * density;   // 2dp
-        float shadowStrokeWidthPx = 4f * density; // 4dp
+        float boxStrokeWidthPx = 0.5f * density;   // 0.5dp
+        float shadowStrokeWidthPx = 1f * density; // 1dp
         float labelPaddingPx = labelPaddingDp * density;
         float labelTextSizePx = labelTextSizeSp * scaledDensity;
 
